@@ -1,6 +1,6 @@
-﻿//Main.cpp
-#include <iostream>
+﻿#include <iostream>
 #include "Socket.h"
+#include <thread>
 
 using namespace std;
 
@@ -12,6 +12,24 @@ enum comands
 	END
 };
 
+struct product {
+	string name;
+	double price;
+
+	product(string name, double price) {
+		this->name = name;
+		this->price = price;
+	}
+};
+const short SIZE = 1;
+const string ComandList[SIZE] = { "GetPrice" };
+product Laptop("laptop", 1200);
+product Phone("phone", 500);
+product Tablet("tablet", 700);
+
+const short PRODUCTCOUNT = 3;
+product ProductList[PRODUCTCOUNT] = { Laptop, Phone, Tablet };
+
 int GetComand(string comand) {
 	if ("GetPrice" == comand) return GetPrice;
 	if ("help" == comand) return HELP;
@@ -19,28 +37,45 @@ int GetComand(string comand) {
 	return InvalidСommand;
 }
 
+void function1(ServerSocket server, char receiveMessage[]) {
+	bool is_skip = 0;
+	int price = 0;
+	server.SendData("\nServer: please enter name of the product");
+	server.ReceiveData(receiveMessage, MAXSTRLEN);
+	for (unsigned short i = 0; receiveMessage[i] != '\0'; i++)
+		if (receiveMessage[i] >= 'A' && receiveMessage[i] <= 'Z') receiveMessage[i] += 'a' - 'A';
+	for (unsigned short i = 0; i < PRODUCTCOUNT; i++)
+		if (ProductList[i].name == receiveMessage) price = ProductList[i].price;
+	if (price == 0)
+	{
+		server.SendData("\nServer: product not found");
+	} else {
+		server.SendData("\nServer: please enter count");
+		server.ReceiveData(receiveMessage, MAXSTRLEN);
+		int res = 0;
+		for (int i = 0; i < strlen(receiveMessage); i++) {
+			if (receiveMessage[i] >= '0' && receiveMessage[i] <= '9' && i > 0 || receiveMessage[i] >= '1' && receiveMessage[i] <= '9' && i == 0)
+				res = res * 10 + receiveMessage[i] - '0';
+			else {
+				server.SendData("\nServer: you entered unacceptable value");
+				is_skip = 1;
+			}
+		}
+		if (is_skip) {
+		} else {
+			string a = "\nServer: the price of the product is " + to_string(res * price) + "$";
+			server.SendData(a);
+		}
+	}
+}
+
+void function2(ServerSocket server) {
+	server.SendData("\nServer:\n\tGetPrice to find out the price of a product,\n\thelp to list all commands,\n\tend to finish work.");
+}
+
+
 int main()
 {
-	struct product {
-		string name;
-		double price;
-
-		product(string name, double price) {
-			this->name = name;
-			this->price = price;
-		}
-	};
-
-	const short SIZE = 1;
-	const string ComandList[SIZE] = { "GetPrice" };
-
-	product Laptop("laptop", 1200);
-	product Phone("phone", 500);
-	product Tablet("tablet", 700);
-
-	const short PRODUCTCOUNT = 3;
-	product ProductList[PRODUCTCOUNT] = { Laptop, Phone, Tablet };
-
 	int nChoice;
 	int port = 24242;  //âûáèðàåì ïîðò
 	string ipAddress = "127.0.0.1"; //Àäðåñ ñåðâåðà
@@ -71,41 +106,15 @@ int main()
 			{
 			case GetPrice:
 			{
-				bool is_skip = 0;
-				int price = 0;
-				server.SendData("\nServer: please enter name of the product");
-				server.ReceiveData(receiveMessage, MAXSTRLEN);
-				for (unsigned short i = 0; receiveMessage[i] != '\0'; i++)
-					if (receiveMessage[i] >= 'A' && receiveMessage[i] <= 'Z') receiveMessage[i] += 'a' - 'A';
-				for (unsigned short i = 0; i < PRODUCTCOUNT; i++)
-					if (ProductList[i].name == receiveMessage) price = ProductList[i].price;
-				if (price == 0)
-				{
-					server.SendData("\nServer: product not found");
-					break;
-				}
-				else {
-					server.SendData("\nServer: please enter count");
-					server.ReceiveData(receiveMessage, MAXSTRLEN);
-					int res = 0;
-					for (int i = 0; i < strlen(receiveMessage); i++) {
-						if (receiveMessage[i] >= '0' && receiveMessage[i] <= '9' && i > 0 || receiveMessage[i] >= '1' && receiveMessage[i] <= '9' && i == 0)
-							res = res * 10 + receiveMessage[i] - '0';
-						else {
-							server.SendData("\nServer: you entered unacceptable value");
-							is_skip = 1;
-						}
-					}
-					if (is_skip) break;
-					string a = "\nServer: the price of the product is " + to_string(res * price) + "$";
-					server.SendData(a);
-				}
+				thread a(function1, server, receiveMessage);
+				a.detach();
 			}
 			break;
 
 			case HELP:
 			{
-				server.SendData("\nServer:\n\tGetPrice to find out the price of a product,\n\thelp to list all commands,\n\tend to finish work.");
+				thread a(function2, server);
+				a.detach();
 			}
 			break;
 

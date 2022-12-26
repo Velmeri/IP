@@ -131,7 +131,12 @@
     <ClCompile Include="Socket.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="resource1.h" />
+    <ClInclude Include="Server.h" />
     <ClInclude Include="Socket.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="IP1.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
